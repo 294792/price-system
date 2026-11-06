@@ -42,8 +42,7 @@
     <input type="password" id="gPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')tryLogin()">
     <button onclick="tryLogin()">登录</button>
     <div class="err" id="gErr"></div>
-    <div class="remembered" id="gRemembered" style="display:none">已自动填入上次登录的账号密码，点击登录即可</div>
-    <span class="clear-link" id="gClear" style="display:none" onclick="clearRemember()">清除记住的账号密码</span>
+    <span class="clear-link" id="gClear" style="display:none" onclick="clearRemember()">清除自动填入</span>
   </div>
 </div>
 
@@ -51,11 +50,11 @@
   <h1>莆田价格体系核算</h1>
   <a class="card" href="full.html">
     <div class="t">价格体系核算系统（完整版）</div>
-    <div class="d">含成本、成本折扣、代理商利润 · 账号 106541</div>
+    <div class="d">含成本、成本折扣、代理商利润</div>
   </a>
   <a class="card" href="dist.html">
     <div class="t">核算系统（分销渠道版）</div>
-    <div class="d">面向分销渠道 · 账号 博远丰分销渠道</div>
+    <div class="d">面向分销渠道</div>
   </a>
   <button class="logout-btn" onclick="logout()">退出登录</button>
 </div>
@@ -86,7 +85,6 @@ function fillRemembered() {
     if (r && r.u) {
       document.getElementById('gUser').value = r.u;
       document.getElementById('gPass').value = r.p || '';
-      document.getElementById('gRemembered').style.display = 'block';
       document.getElementById('gClear').style.display = 'block';
     }
   } catch (e) {}
@@ -96,7 +94,6 @@ function clearRemember() {
   localStorage.removeItem(REMEMBER_KEY);
   document.getElementById('gUser').value = '';
   document.getElementById('gPass').value = '';
-  document.getElementById('gRemembered').style.display = 'none';
   document.getElementById('gClear').style.display = 'none';
   document.getElementById('gErr').textContent = '';
 }
