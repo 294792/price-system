@@ -13,6 +13,8 @@
   a.card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
   a.card .t { font-size: 19px; font-weight: 600; color: #1f3a5f; margin-bottom: 6px; }
   a.card .d { font-size: 13px; color: #888; }
+  .logout-btn { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 6px; padding: 8px 22px; font-size: 14px; cursor: pointer; margin-top: 6px; }
+  .logout-btn:hover { background: rgba(255,255,255,.25); }
   /* 登录遮罩 */
   #gate { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #1f3a5f 0%, #2c5282 100%); display: flex; align-items: center; justify-content: center; }
   #gate .box { background: #fff; border-radius: 12px; padding: 32px 36px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
@@ -24,6 +26,8 @@
   #gate .box button { width: 100%; margin-top: 20px; background: #1f3a5f; color: #fff; border: 0; border-radius: 6px; padding: 11px; font-size: 15px; cursor: pointer; }
   #gate .box button:hover { background: #2c5282; }
   #gate .box .err { color: #d9534f; font-size: 13px; margin-top: 10px; text-align: center; min-height: 18px; }
+  #gate .box .remembered { color: #4a4; font-size: 12px; text-align: center; margin-top: 8px; }
+  #gate .box .clear-link { display: block; color: #999; font-size: 12px; text-align: center; margin-top: 10px; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -38,6 +42,8 @@
     <input type="password" id="gPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')tryLogin()">
     <button onclick="tryLogin()">登录</button>
     <div class="err" id="gErr"></div>
+    <div class="remembered" id="gRemembered" style="display:none">已自动填入上次登录的账号密码，点击登录即可</div>
+    <span class="clear-link" id="gClear" style="display:none" onclick="clearRemember()">清除记住的账号密码</span>
   </div>
 </div>
 
@@ -51,6 +57,7 @@
     <div class="t">核算系统（分销渠道版）</div>
     <div class="d">面向分销渠道 · 账号 博远丰分销渠道</div>
   </a>
+  <button class="logout-btn" onclick="logout()">退出登录</button>
 </div>
 
 <script>
@@ -59,21 +66,54 @@
    源码不含明文密码；如需修改密码，重新计算哈希并替换此值后重新部署，旧密码即失效。 */
 var AUTH_HASH = 'cc73aa6ffe1a50244d4a9c5748e1e7ef32c215af924fdedf24d9347cdfa4bfd4';
 var SALT = 'ptjg_2026::';
-var GATE_KEY = 'entry_gate_ok';
+var GATE_KEY = 'entry_gate_ok';      /* sessionStorage：本浏览器会话内保持登录，退出/关闭浏览器即失效 */
+var REMEMBER_KEY = 'entry_remember'; /* localStorage：记住账号密码，自动填入登录框 */
 
 async function sha256Hex(s) {
   var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
 
+function lock() {
+  document.getElementById('gate').style.display = 'flex';
+  fillRemembered();
+}
 function unlock() { document.getElementById('gate').style.display = 'none'; }
+
+function fillRemembered() {
+  try {
+    var r = JSON.parse(localStorage.getItem(REMEMBER_KEY) || 'null');
+    if (r && r.u) {
+      document.getElementById('gUser').value = r.u;
+      document.getElementById('gPass').value = r.p || '';
+      document.getElementById('gRemembered').style.display = 'block';
+      document.getElementById('gClear').style.display = 'block';
+    }
+  } catch (e) {}
+}
+
+function clearRemember() {
+  localStorage.removeItem(REMEMBER_KEY);
+  document.getElementById('gUser').value = '';
+  document.getElementById('gPass').value = '';
+  document.getElementById('gRemembered').style.display = 'none';
+  document.getElementById('gClear').style.display = 'none';
+  document.getElementById('gErr').textContent = '';
+}
+
+function logout() {
+  sessionStorage.removeItem(GATE_KEY);
+  lock();
+}
 
 async function tryLogin() {
   var u = document.getElementById('gUser').value.trim();
   var p = document.getElementById('gPass').value;
   var h = await sha256Hex(SALT + u + '|' + p);
   if (h === AUTH_HASH) {
-    sessionStorage.setItem(GATE_KEY, String(Date.now()));
+    localStorage.setItem(REMEMBER_KEY, JSON.stringify({ u: u, p: p }));
+    sessionStorage.setItem(GATE_KEY, '1');
+    document.getElementById('gErr').textContent = '';
     unlock();
   } else {
     document.getElementById('gErr').textContent = '账号或密码错误';
@@ -81,8 +121,8 @@ async function tryLogin() {
 }
 
 (function init() {
-  var ok = sessionStorage.getItem(GATE_KEY);
-  if (ok && Date.now() - Number(ok) < 12 * 3600 * 1000) unlock();
+  if (sessionStorage.getItem(GATE_KEY)) { unlock(); return; }
+  lock();
 })();
 </script>
 </body>
