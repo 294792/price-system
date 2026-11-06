@@ -7,15 +7,40 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; background: linear-gradient(135deg, #1f3a5f 0%, #2c5282 100%); }
-  .wrap { text-align: center; }
+  .wrap { text-align: center; width: 100%; padding: 0 16px; }
   h1 { color: #fff; font-size: 26px; font-weight: 600; margin: 0 0 30px; letter-spacing: 2px; }
   a.card { display: block; width: 300px; margin: 0 auto 18px; background: #fff; border-radius: 12px; padding: 26px 20px; text-decoration: none; box-shadow: 0 10px 30px rgba(0,0,0,.25); transition: transform .15s, box-shadow .15s; }
   a.card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
   a.card .t { font-size: 19px; font-weight: 600; color: #1f3a5f; margin-bottom: 6px; }
   a.card .d { font-size: 13px; color: #888; }
+  /* 登录遮罩 */
+  #gate { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #1f3a5f 0%, #2c5282 100%); display: flex; align-items: center; justify-content: center; }
+  #gate .box { background: #fff; border-radius: 12px; padding: 32px 36px; width: 340px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  #gate .box h2 { text-align: center; margin: 0 0 6px; color: #1f3a5f; font-size: 22px; }
+  #gate .box .sub { text-align: center; color: #999; font-size: 13px; margin-bottom: 22px; }
+  #gate .box label { display: block; color: #555; font-size: 13px; margin: 12px 0 4px; text-align: left; }
+  #gate .box input { width: 100%; border: 1px solid #ccd2da; border-radius: 6px; padding: 9px 12px; font-size: 15px; }
+  #gate .box input:focus { outline: none; border-color: #1f3a5f; box-shadow: 0 0 0 3px rgba(31,58,95,.12); }
+  #gate .box button { width: 100%; margin-top: 20px; background: #1f3a5f; color: #fff; border: 0; border-radius: 6px; padding: 11px; font-size: 15px; cursor: pointer; }
+  #gate .box button:hover { background: #2c5282; }
+  #gate .box .err { color: #d9534f; font-size: 13px; margin-top: 10px; text-align: center; min-height: 18px; }
 </style>
 </head>
 <body>
+
+<div id="gate">
+  <div class="box">
+    <h2>价格核算系统</h2>
+    <div class="sub">请登录后使用</div>
+    <label>账号</label>
+    <input type="text" id="gUser" autocomplete="off" placeholder="请输入账号">
+    <label>密码</label>
+    <input type="password" id="gPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')tryLogin()">
+    <button onclick="tryLogin()">登录</button>
+    <div class="err" id="gErr"></div>
+  </div>
+</div>
+
 <div class="wrap">
   <h1>莆田价格体系核算</h1>
   <a class="card" href="full.html">
@@ -27,5 +52,38 @@
     <div class="d">面向分销渠道 · 账号 博远丰分销渠道</div>
   </a>
 </div>
+
+<script>
+'use strict';
+/* 凭证哈希：SHA-256("ptjg_2026::" + 账号 + "|" + 密码)。
+   源码不含明文密码；如需修改密码，重新计算哈希并替换此值后重新部署，旧密码即失效。 */
+var AUTH_HASH = 'cc73aa6ffe1a50244d4a9c5748e1e7ef32c215af924fdedf24d9347cdfa4bfd4';
+var SALT = 'ptjg_2026::';
+var GATE_KEY = 'entry_gate_ok';
+
+async function sha256Hex(s) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+function unlock() { document.getElementById('gate').style.display = 'none'; }
+
+async function tryLogin() {
+  var u = document.getElementById('gUser').value.trim();
+  var p = document.getElementById('gPass').value;
+  var h = await sha256Hex(SALT + u + '|' + p);
+  if (h === AUTH_HASH) {
+    sessionStorage.setItem(GATE_KEY, String(Date.now()));
+    unlock();
+  } else {
+    document.getElementById('gErr').textContent = '账号或密码错误';
+  }
+}
+
+(function init() {
+  var ok = sessionStorage.getItem(GATE_KEY);
+  if (ok && Date.now() - Number(ok) < 12 * 3600 * 1000) unlock();
+})();
+</script>
 </body>
 </html>
